@@ -3,6 +3,7 @@ import {useDebounce} from 'react-use'
 import Search from "./components/Search"
 import Spinner from "./components/Spinner";
 import MovieCard from "./components/MovieCard";
+import { getTrendingMovies, updateSearchCount } from "./Appwrite";
 
 const API_BASE_URL = 'https://api.themoviedb.org/3' ;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY ;
@@ -19,9 +20,13 @@ const API_OPTIONS = {
 function App() {
   const [searchTerm, setSearchTerm] = useState('') ;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [errorMsg, setErrorMsg] = useState('')
+
+  const [trendingMovies, setTrendingMovies] = useState([]) ;
   const [movieList, setMovieList] = useState([]) ;
-  const [isLoading, setIsLoading] = useState(false) 
+
+  const [errorMsg, setErrorMsg] = useState('')
+  const [isLoading, setIsLoading] = useState(false) ;
+  
 
   useDebounce(()=> setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
 
@@ -46,6 +51,11 @@ function App() {
       }
 
       setMovieList(data.results || [])
+
+    if(query && data.results.length > 0) {
+      console.log("Calling updateSearchCount with:", query, data.results[0]);
+      await updateSearchCount(query, data.results[0])
+    }
     
     } catch(error) {
       console.log(`Error : ${error}`);
@@ -55,9 +65,23 @@ function App() {
     }
   }
 
+  const loadTrendingMovies = async() => {
+    try {
+      const movies = await getTrendingMovies() ;
+      setTrendingMovies(movies) ;
+    } catch (error) {
+      console.error(`Error fetching trending movies : ${error}`);
+     
+    }
+  }
+
   useEffect(()=> {
     fetchMovies(debouncedSearchTerm) ;
   },[debouncedSearchTerm]) ;
+
+  useEffect(()=> {
+    loadTrendingMovies() ;
+  },[])
 
   return (
     <main>
@@ -68,12 +92,25 @@ function App() {
           <h1>Find <span className="text-gradient">Movies </span>You'll Enjoy Without the Hassle</h1>
           <Search setSearchTerm={setSearchTerm} searchTerm={searchTerm} />
         </header>
-        <section className="all-movies mt-5">
+        {trendingMovies.length > 0 && (
+          <section className="trending">
+            <h2>Trending Movies</h2>
+            <ul>
+              {trendingMovies.map((movie, index)=>(
+                <li key={movie.$id}>
+                  <p>{index + 1}</p>
+                  <img src={movie.poster_url} alt={movie.title} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section className="all-movies">
           <h2>All Movies</h2>
 
-          {isLoading ? (<p className="text-white"><Spinner /></p>) : errorMsg ? (<p className="text-red-500">{errorMsg}</p>) : (<ul>
+          {isLoading ? <Spinner /> : errorMsg ? (<p className="text-red-500">{errorMsg}</p>) : (<ul>
             {movieList.map((movie)=> (
-              <p key={movie.id} className="text-white"><MovieCard key={movie.id} movie={movie}/> </p>
+             <MovieCard key={movie.id} movie={movie}/> 
             ))}
           </ul>)} 
           

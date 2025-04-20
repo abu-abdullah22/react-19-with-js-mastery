@@ -15,7 +15,7 @@ const MovieCard = ({movie :
                     <p className="lang">{original_language}</p>
 
                     <span>•</span>
-                    <p className="Year">{release_date ? release_date.split('-')[0] : 'N/A'}</p>
+                    <p className="Year text-white" >{release_date ? release_date.split('-')[0] : 'N/A'}</p>
 
                 </div>
             </div>
